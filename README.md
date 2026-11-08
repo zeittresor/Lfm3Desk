@@ -1,4 +1,4 @@
-# LFM3 Desk 1.4.0
+# LFM3 Desk 1.5.1
 
 Lokale Windows-Anwendung: C# / WinForms (.NET 8), mit offizieller Transformers-Inferenz für **LiquidAI/LFM3-Omni-2B**. GUI und CLI verwenden denselben lokalen Worker. Kein API-Schlüssel, Ollama, externer Agent oder Netzwerkserver erforderlich.
 
