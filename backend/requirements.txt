@@ -1,0 +1,14 @@
+transformers>=5.20.2,<6
+accelerate
+huggingface_hub
+pillow
+librosa
+soundfile
+torchcodec==0.17.0
+onnxruntime==1.23.2
+regex
+libzim==4.0.0
+ddgs>=9,<10
+mcp>=1.20,<2
+certifi
+truststore>=0.10,<1

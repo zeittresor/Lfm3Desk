@@ -1,0 +1,9 @@
+{
+  "background": "#edf0f5",
+  "surface": "#ffffff",
+  "foreground": "#172033",
+  "accent": "#c7d9f5",
+  "muted": "#545f6d",
+  "border": "#8794a6",
+  "error": "#ffdcdf"
+}

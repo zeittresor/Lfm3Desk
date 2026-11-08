@@ -1,0 +1,25 @@
+LFM3 DESK 1.4.0 — WINDOWS x64
+
+In einen neuen Versionsordner entpacken und Start.cmd öffnen.
+Eigene .venv; Modelle, Wheels, Tools, ZIM und vorhandene Wettercaches werden
+von Nachbarversionen übernommen. Quelldaten/Versionsordner werden nicht gelöscht.
+
+NEU:
+- Einstellungen -> Verhalten -> Links und Dateipfade im Chat ausblenden.
+  Standard AN; Originaldaten bleiben erhalten und wieder einblendbar.
+- Wetter bei neuen Einstellungen standardmäßig AN, nur bei einer Anfrage.
+- Erfolgreiche Abfragen speichern den regionalen Bericht und drei vergangene Tage.
+- Bei Ausfall: klare Offline-Info, Cache-Alter und passende vergangene Daten.
+  Daraus höchstens eine ausdrücklich unsichere Trend-/Jahreszeit-Einschätzung.
+- Offline-Modus verhindert Online-Tool-Aufrufe, erlaubt aber freigegebenen
+  Wetter-Cachezugriff. Ohne Cache keine erfundenen lokalen Wetterwerte.
+- Websuche, Online-Wikipedia und MCP bleiben standardmäßig AUS.
+
+CLI: -offline | -no-weather | -weather | -help
+Keine neuen Abhängigkeiten oder Modelle gegenüber 1.2.0.
+Chats liegen in output/chats und werden nicht automatisch aus alten Versionen importiert.
+
+70 Backendtests, 40 CLI-/Persistenz-/Anzeigeprüfungen und PowerShell-Suiten bestanden.
+Windows-Build erstellt; tatsächliche Windows-Darstellung/Modellantworten hier nicht geprüft.
+
+OPTIONAL IMAGE GPU: After normal setup, open Settings and choose Install image GPU runtime. DirectML uses the same Tiny-SD model. CPU remains default; optional packages use a separate app-local .venv-image and the shared wheelhouse. See README.md.

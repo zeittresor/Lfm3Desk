@@ -1,0 +1,48 @@
+{
+  "repository": "ayushmaninbox/artificial-stupidity-asif",
+  "revision": "5e4997cfbea77f8b71607c00dc2db6d9c7ca311e",
+  "files": [
+    {
+      "path": "text_encoder/model.onnx",
+      "url": "https://huggingface.co/ayushmaninbox/artificial-stupidity-asif/resolve/5e4997cfbea77f8b71607c00dc2db6d9c7ca311e/tiny-sd/text_encoder/model.onnx",
+      "size": 123830951,
+      "sha256": "af85c8a1410db0857dbf7edccd73cc3064d4dec0b17f0d145e86967d934563ff"
+    },
+    {
+      "path": "tokenizer/merges.txt",
+      "url": "https://huggingface.co/ayushmaninbox/artificial-stupidity-asif/resolve/5e4997cfbea77f8b71607c00dc2db6d9c7ca311e/tiny-sd/tokenizer/merges.txt",
+      "size": 524619,
+      "sha256": "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a"
+    },
+    {
+      "path": "tokenizer/special_tokens_map.json",
+      "url": "https://huggingface.co/ayushmaninbox/artificial-stupidity-asif/resolve/5e4997cfbea77f8b71607c00dc2db6d9c7ca311e/tiny-sd/tokenizer/special_tokens_map.json",
+      "size": 585,
+      "sha256": "a46982c1c09487f4ba4118d4d491a01d7e1b3a9e457662aa93f7c7159f11eaf7"
+    },
+    {
+      "path": "tokenizer/tokenizer_config.json",
+      "url": "https://huggingface.co/ayushmaninbox/artificial-stupidity-asif/resolve/5e4997cfbea77f8b71607c00dc2db6d9c7ca311e/tiny-sd/tokenizer/tokenizer_config.json",
+      "size": 734,
+      "sha256": "ef26e72cbecdce464701ab0fc60394601091b2df69d35209a9bbb9e9c9461bd2"
+    },
+    {
+      "path": "tokenizer/vocab.json",
+      "url": "https://huggingface.co/ayushmaninbox/artificial-stupidity-asif/resolve/5e4997cfbea77f8b71607c00dc2db6d9c7ca311e/tiny-sd/tokenizer/vocab.json",
+      "size": 1059962,
+      "sha256": "e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349"
+    },
+    {
+      "path": "unet/model.onnx",
+      "url": "https://huggingface.co/ayushmaninbox/artificial-stupidity-asif/resolve/5e4997cfbea77f8b71607c00dc2db6d9c7ca311e/tiny-sd/unet/model.onnx",
+      "size": 324976959,
+      "sha256": "74b022a5bf1a861cb3f7dd2d6c2f7a32ce1a98ea1c68438342857f6cd46933b2"
+    },
+    {
+      "path": "vae_decoder_tiny/model.onnx",
+      "url": "https://huggingface.co/ayushmaninbox/artificial-stupidity-asif/resolve/5e4997cfbea77f8b71607c00dc2db6d9c7ca311e/tiny-sd/vae_decoder_tiny/model.onnx",
+      "size": 5101500,
+      "sha256": "d653ec4bc7ea522ae037c9f4396f4ec0ca0a24c1ecf5c2e806a9d323de8853cd"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+onnxruntime-directml==1.23.0
+numpy
+pillow
+regex
+certifi
+truststore>=0.10,<1
