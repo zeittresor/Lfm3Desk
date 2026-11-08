@@ -6,7 +6,7 @@ Die App verwendet das LFM3-Omni-2B Model sowie das TinySD Model und ermöglicht 
 
 PS: Die Stabilität der Sprachausgabe wird dadurch erreicht das das Model erstmal die komplette Antwort generiert und dann jeweils jeden Satz für sich genommen stumm spricht, anschliessend wenn alle Fragmente erzeugt wurden, werden diese zusammengesetzt und durch einen Normalisierungs-Audiofilter geschickt und dann erst gesprochen, würde dies nicht so erfolgen wird jeder Folgesatz im zunehmend Verlauf schlechter bis zur nicht mehr konstistenten Aussprache daher wurde dies so realisiert.
 
-https://github.com/user-attachments/assets/4c3c67cf-8bc1-49e1-b719-ae41a9cbf751
+https://github.com/user-attachments/assets/4d6db1d3-7fc5-4ecc-89ff-55b56f74e33d
 
 
 ## Neu in 1.4.0: optionale GPU-Bildgenerierung
