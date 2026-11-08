@@ -4,7 +4,7 @@ Lokale Windows-Anwendung: C# / WinForms (.NET 8), mit offizieller Transformers-I
 
 Die App verwendet das LFM3-Omni-2B Model sowie das TinySD Model und ermöglicht Multi-Format In-/Outputs. Die Funktionalität umfasst die Eingabe per Sprache, Textchat, Bilder, Videos (ohne/mit) Ton, Audio und als Ausgabe Sprachausgabe, Text, Office Dokumente, Audio, Bildgenerierung. Die App nutzt eingebaute Tools um Bilder zu erstellen (da das LFM3 Model diese zwar eingangs versteht jedoch keine erstellen kann hat das Model einen Harness erhalten um dies über TinySD dennoch zu realisieren und gibt die Bild Interpretation dann an das Model zurück damit das Model erfährt was auf dem Bild zu sehen ist. Das Model hat noch einige andere Tools erhalten wie eine lokale Wikipedia als Wissensquelle, schliesslich ist LFM3-Omni-2B ein recht kleines Model und kann somit bei Wissensfragen darauf zurückgreifen - selbst offline. Standardmäßig kann das Model auf Wetterdaten zugreifen (sofern man online ist), falls man offline sein sollte greift das Wetter tool auf die letzten 3 Tage/Wetterdaten lokal abgelegt zu um eine prognose zu erstellen. Für mathematische Berechnungen verwendet das tool keine Model spezifischen Überlegungen sondern verwendet ein Taschenrechner Tool uvm...
 
-<img width="1517" height="1015" alt="grafik" src="https://github.com/user-attachments/assets/04787888-b2c9-4a0a-aba6-a885bccfaef9" />
+https://github.com/user-attachments/assets/4c3c67cf-8bc1-49e1-b719-ae41a9cbf751
 
 
 ## Neu in 1.4.0: optionale GPU-Bildgenerierung
