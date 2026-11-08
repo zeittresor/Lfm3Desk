@@ -6,6 +6,7 @@ import uuid
 from pathlib import Path
 from app_version import VERSION
 from speech_verbalizer import verbalize
+from code_artifacts import without_code
 
 RATE=24000
 
@@ -49,7 +50,8 @@ def combine(fragments,rate=RATE):
 def render(engine,text,language,voice,request,emit,root):
     import numpy as np
     import soundfile as sf
-    prepared_text=verbalize(text,language)
+    prepared_text=verbalize(without_code(text),language)
+    if not prepared_text:prepared_text='Der Code ist als Text verfügbar.' if language in ('German','DE','de') else 'The code is available as text.'
     segments=chunks(prepared_text)
     if not segments:raise ValueError('No text remains for speech output.')
     temporary=not request.get('save_audio',True)
@@ -74,6 +76,6 @@ def render(engine,text,language,voice,request,emit,root):
         del out  # Do not retain the previous fragment GPU outputs during the next call.
     emit('speech_progress',stage='normalizing',part=len(segments),total=len(segments))
     final=folder/(stem+'.wav');joined=combine(waves);sf.write(str(final),joined,RATE,subtype='PCM_16')
-    if not temporary:(parts/'manifest.json').write_text(json.dumps({'app_version':VERSION,'created':datetime.datetime.now().astimezone().isoformat(),'source_text':text,'prepared_text':prepared_text,'speech_preparation':'measurements-v1','language':language,'voice':voice,'sample_rate':RATE,'normalization':'bounded RMS with -0.45 dBFS peak ceiling','final':str(final),'fragments':metadata},ensure_ascii=False,indent=2),encoding='utf-8')
+    if not temporary:(parts/'manifest.json').write_text(json.dumps({'app_version':VERSION,'created':datetime.datetime.now().astimezone().isoformat(),'source_text':text,'prepared_text':prepared_text,'speech_preparation':'dates-time-abbreviations-v2','language':language,'voice':voice,'sample_rate':RATE,'normalization':'bounded RMS with -0.45 dBFS peak ceiling','final':str(final),'fragments':metadata},ensure_ascii=False,indent=2),encoding='utf-8')
     emit('speech_progress',stage='complete',part=len(segments),total=len(segments))
     return str(final),temporary

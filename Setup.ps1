@@ -9,7 +9,7 @@ function Step($s){Write-Host "[STEP] $s" -ForegroundColor Cyan}
 . (Join-Path $PSScriptRoot 'NativeProcess.ps1')
 . (Join-Path $PSScriptRoot 'ReuseAssets.ps1')
 try {
-  Write-Host 'LFM3 Desk Setup v1.4.0' -ForegroundColor Magenta
+  Write-Host 'LFM3 Desk Setup v1.5.1' -ForegroundColor Magenta
   Write-Host "[DIR] $PSScriptRoot"
   if($ImageGpuOnly){
     $venv=Join-Path $PSScriptRoot '.venv\Scripts\python.exe'
@@ -136,7 +136,7 @@ try {
   [IO.File]::WriteAllText((Join-Path $PSScriptRoot $marker),$requirementsHash)
   $freeze=Invoke-NativeProcess -FilePath $venv -Arguments @('-m','pip','freeze') -Echo $false
   if($freeze.ExitCode -ne 0){throw 'Could not record installed packages'}
-  $versionHeader="# LFM3 Desk 1.4.0 | runtime-versions | $(Get-Date -Format o)"
+  $versionHeader="# LFM3 Desk 1.5.1 | runtime-versions | $(Get-Date -Format o)"
   $environmentHeader="# Environment: $venv"
   @($versionHeader,$environmentHeader,$freeze.Output) | Set-Content 'output\logs\runtime-versions.txt' -Encoding UTF8
   if($Offline){$env:HF_HUB_OFFLINE='1';$env:TRANSFORMERS_OFFLINE='1'}

@@ -9,6 +9,7 @@ public sealed class ChatSession
     public string Draft {get;set;}="";
     public List<Attachment> Attachments {get;set;}=new();
     public List<JsonElement> History {get;set;}=new();
+    public List<string> GeneratedImages {get;set;}=new();
     public string? Image {get;set;}
     public string? Audio {get;set;}
 }
@@ -35,7 +36,7 @@ public sealed class ChatStore
 }
 public static class AppLog
 {
-    public const string Version="1.4.0";
+    public const string Version="1.5.1";
     public static void Append(string filename,string text,bool newSession=false)
     {
         var directory=Path.Combine(Paths.Root,"output","logs");Directory.CreateDirectory(directory);var path=Path.Combine(directory,filename);

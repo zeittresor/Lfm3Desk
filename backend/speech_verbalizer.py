@@ -1,10 +1,11 @@
 """Deterministic speech-only typography/measurement preparation (no dependencies).
 
 Do not apply to chat history, tool data or visible answers. Numbers are expanded
-only next to supported units; identifiers, dates and weather codes stay intact.
+next to supported units or in validated dates/times; identifiers and codes stay intact.
 """
 import re
 import unicodedata
+from speech_dates import prepare as prepare_dates
 
 _DE = ('null eins zwei drei vier fünf sechs sieben acht neun zehn elf zwölf '
        'dreizehn vierzehn fünfzehn sechzehn siebzehn achtzehn neunzehn').split()
@@ -68,11 +69,17 @@ def verbalize(text, language):
     en = lang in ('en', 'en-us', 'en-gb', 'english', 'englisch')
     text = unicodedata.normalize('NFC', str(text)).replace('\u202f', ' ').replace('\xa0', ' ')
     # Remove presentation markup before list/heading boundaries become whitespace.
-    text = re.sub(r'(?m)^\s*(?:#{1,6}\s+|>\s*|[-*+•]\s+|\d+[.)]\s+)', '', text)
+    text = re.sub(r'(?m)^\s*(?:#{1,6}\s+|>\s*|[-*+•]\s+)', '', text)
     text = re.sub(r'\*\*|__|~~|`+', '', text)
     text = re.sub(r'(?<!\w)[*_](?=\S)|(?<=\S)[*_](?!\w)', '', text)
     if not (de or en):
         return re.sub(r'\s+', ' ', re.sub(r' +([,:;!?])', r'\1', text)).strip()
+    protected=[]
+    def protect(m):
+        protected.append(m[0]);return '\ue100'+chr(0xe200+len(protected)-1)+'\ue101'
+    text=re.sub(r'(?:https?://|www\.)[^\s<>]+|[A-Za-z]:[\\/][^\n]+|(?<!\w)(?:[\w.-]+[\\/])+[\w.-]+\.(?:png|jpg|wav|mp3|mp4|txt|json|zip)\b',protect,text)
+    text=prepare_dates(text,de,integer)
+    text=re.sub(r'(?m)^\s*\d+[.)]\s+', '', text)
     if de:
         text = re.sub(r'\bNebelchance\b', 'Nebelwahrscheinlichkeit', text, flags=re.I)
         text = re.sub(r'\bRegenchance\b', 'Regenwahrscheinlichkeit', text, flags=re.I)
@@ -109,4 +116,5 @@ def verbalize(text, language):
     text = re.sub(r'(%|Prozent|percent)[‑–-](?=\w)', r'\1 ', text)
     # A line boundary is a clause boundary, preventing adjacent bullet labels merging.
     text = re.sub(r'(?<=[\w)])\s*\n+\s*(?=\w)', '. ', text)
+    for i,value in enumerate(protected):text=text.replace('\ue100'+chr(0xe200+i)+'\ue101',value)
     return re.sub(r'\s+', ' ', re.sub(r' +([,:;!?])', r'\1', text)).strip()

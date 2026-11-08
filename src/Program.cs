@@ -33,8 +33,8 @@ internal static class Program
             }
             var reply=await worker.SendAsync(options.Request,cancel.Token);
             if(reply==null) return 0;
-            if(options.Request.output.Contains("txt")) Console.WriteLine(reply.Text+reply.SourceText);
-            if(options.File!=null) await File.WriteAllTextAsync(options.File,reply.Text+reply.SourceText,new UTF8Encoding(false),cancel.Token);
+            if(options.Request.output.Contains("txt")) Console.WriteLine(reply.Text+(options.Request.show_sources?reply.SourceText:""));
+            if(options.File!=null) await File.WriteAllTextAsync(options.File,reply.Text+(options.Request.show_sources?reply.SourceText:""),new UTF8Encoding(false),cancel.Token);
             if(reply.Audio!=null)
             {
                 try { Console.Error.WriteLine(reply.Audio); if(options.Play) {using var player=new SoundPlayer(reply.Audio);player.PlaySync();} }

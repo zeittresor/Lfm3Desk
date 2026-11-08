@@ -1,4 +1,5 @@
 """Prepare generated replies for speech; display/export text stays unchanged."""
+from code_artifacts import without_code
 import re
 
 def _labels_only(text):
@@ -24,7 +25,7 @@ def _drop_destination(match):
     return ')' * max(0,value.count(')')-value.count('('))+punctuation
 
 def for_speech(text,artifact_paths=()):
-    text=_labels_only(str(text))
+    text=_labels_only(without_code(str(text)))
     for path in sorted(set(str(p) for p in artifact_paths if p),key=len,reverse=True):
         for variant in {path,path.replace('\\','/'),path.replace('/','\\')}:text=text.replace(variant,'')
     # Reference definitions carry destinations, not spoken content.

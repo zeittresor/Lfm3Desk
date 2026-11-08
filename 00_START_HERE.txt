@@ -1,4 +1,4 @@
-LFM3 DESK 1.4.0 — WINDOWS x64
+LFM3 DESK 1.5.1 — WINDOWS x64
 
 In einen neuen Versionsordner entpacken und Start.cmd öffnen.
 Eigene .venv; Modelle, Wheels, Tools, ZIM und vorhandene Wettercaches werden

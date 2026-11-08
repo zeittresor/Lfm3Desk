@@ -123,5 +123,10 @@
   "image_gpu_ready": "Image GPU runtime installed. DirectML selected; GPU index 0 is the default adapter.",
   "image_gpu_runtime": "GPU runtime",
   "image_backend_cpu": "CPU",
-  "image_backend_directml": "GPU (DirectML, optional)"
+  "image_backend_directml": "GPU (DirectML, optional)",
+  "assistant_name": "Assistant name",
+  "show_sources": "Show sources in chat",
+  "show_tools": "Show tool calls in chat",
+  "export_pdf": "Export PDF",
+  "open_output_folder": "Open output folder"
 }

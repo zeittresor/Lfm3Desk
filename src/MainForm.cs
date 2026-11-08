@@ -13,7 +13,7 @@ public sealed class MainForm : Form
     ChatSession activeChat=new();
     bool selectingChat;
     readonly ListBox chatList=new(){Dock=DockStyle.Fill,DrawMode=DrawMode.OwnerDrawFixed,ItemHeight=54,BorderStyle=BorderStyle.FixedSingle};
-    readonly DeskButton newChat=new();
+    readonly DeskButton newChat=new(),pdfExport=new(),outputFolder=new();
     readonly Recorder recorder=new();
     CancellationTokenSource? cancellation;
     bool recording,busy,localizing,failed;
@@ -23,6 +23,7 @@ public sealed class MainForm : Form
     readonly ComboBox ui=new(),theme=new(),inputLanguage=new(),outputLanguage=new(),speechLanguage=new(),format=new(),task=new(),voice=new(),device=new(),imageBackend=new();
     readonly NumericUpDown imageGpu=new(){Minimum=0,Maximum=31};
     readonly DeskButton imageGpuInstall=new();
+    readonly CheckBox showSources=new(),showTools=new();
     readonly CheckBox hideDestinations=new(),offlineMode=new(),save=new(),tools=new(),videoAudio=new(),autoplay=new();
     readonly CheckBox wikiEnabled=new(),wikiAuto=new(),wikiOnlineEnabled=new(),webEnabled=new(),weatherEnabled=new(),mcpEnabled=new();
     readonly Label wikiAvailability=new(){AutoSize=true,MaximumSize=new Size(430,0),UseMnemonic=false,Padding=new Padding(0,6,0,6)};
@@ -31,6 +32,7 @@ public sealed class MainForm : Form
     readonly DeskButton wikiBrowse=new(),wikiDownload=new(),mcpExport=new();
     readonly NumericUpDown tokens=new(){Minimum=32,Maximum=8192,Increment=128},fps=new(){Minimum=0.1m,Maximum=2,DecimalPlaces=1,Increment=0.1m};
     readonly TextBox prompt=new(){Multiline=true,ScrollBars=ScrollBars.Vertical,Dock=DockStyle.Fill,AcceptsReturn=true,BorderStyle=BorderStyle.FixedSingle};
+    readonly TextBox assistantName=new(){MaxLength=64};
     readonly TextBox system=new(){Multiline=true,ScrollBars=ScrollBars.Vertical,Dock=DockStyle.Fill,Height=84,BorderStyle=BorderStyle.FixedSingle};
     readonly RichTextBox answer=new(){ReadOnly=true,Dock=DockStyle.Fill,DetectUrls=false,BorderStyle=BorderStyle.None};
     readonly RichTextBox setupLog=new(){ReadOnly=true,Dock=DockStyle.Fill,DetectUrls=false,WordWrap=false,Font=new Font("Consolas",9.5f),BorderStyle=BorderStyle.None};
@@ -63,7 +65,7 @@ public sealed class MainForm : Form
 
     public MainForm()
     {
-        Text="LFM3 Desk 1.4.0";Font=new Font("Segoe UI",10);AutoScaleMode=AutoScaleMode.Dpi;
+        Text="LFM3 Desk 1.5.1";Font=new Font("Segoe UI",10);AutoScaleMode=AutoScaleMode.Dpi;
         MinimumSize=new Size(900,680);Size=new Size(1180,850);StartPosition=FormStartPosition.CenterScreen;
         var body=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=3,Padding=new Padding(12,8,12,8)};
         body.RowStyles.Add(new RowStyle(SizeType.AutoSize));body.RowStyles.Add(new RowStyle(SizeType.Percent,100));body.RowStyles.Add(new RowStyle(SizeType.Absolute,32));
@@ -88,6 +90,11 @@ public sealed class MainForm : Form
         wikiDownload.Click+=async(_,_)=>await DownloadWikipedia();
         mcpExport.Click+=(_,_)=>{try{ReadSettings().Save();using var dialog=new SaveFileDialog{Filter="JSON|*.json",FileName="lfm3desk-mcp.json"};if(dialog.ShowDialog()==DialogResult.OK)File.WriteAllText(dialog.FileName,McpHost.Configuration());}catch(Exception e){ReportError(e);}};
         foreach(var check in new[]{wikiEnabled,wikiAuto,wikiOnlineEnabled,webEnabled,weatherEnabled,mcpEnabled})check.CheckedChanged+=(_,_)=>{if(!localizing)try{ReadSettings().Save();}catch(Exception e){ReportError(e);}};
+        assistantName.TextChanged+=(_,_)=>{if(!localizing)RenderTranscript();};
+        assistantName.Leave+=(_,_)=>{try{ReadSettings().Save();}catch(Exception e){ReportError(e);}};
+        foreach(var check in new[]{showSources,showTools})check.CheckedChanged+=(_,_)=>{if(!localizing){RenderTranscript();ReadSettings().Save();}};
+        outputFolder.Click+=(_,_)=>{try{OpenOutput();}catch(Exception error){ReportError(error);}};
+        pdfExport.Click+=async(_,_)=>await ExportPdf();
         hideDestinations.CheckedChanged+=(_,_)=>{if(!localizing){RenderTranscript();ReadSettings().Save();}};
         offlineMode.CheckedChanged+=(_,_)=>{if(!localizing)ReadSettings().Save();};
         play.Click+=(_,_)=>PlayLast();
@@ -111,16 +118,19 @@ public sealed class MainForm : Form
         Fill(inputLanguage,languages,settings.InputLanguage,"language");Fill(outputLanguage,languages,settings.OutputLanguage,"language");Fill(speechLanguage,speechLanguages,settings.SpeechLanguage,"language");
         Fill(format,new[]{"txt","tts","txt,tts"},settings.Output,"output");Fill(task,new[]{"chat","asr","translate","tts"},"chat","task");Fill(voice,new[]{"female","male"},settings.Voice,"voice");Fill(device,new[]{"auto","cuda","cpu"},settings.Device,"device");
         Fill(imageBackend,new[]{"cpu","directml"},settings.ImageBackend,"image_backend");imageGpu.Value=Math.Clamp(settings.ImageGpu,0,31);
+        assistantName.Text=Settings.CleanAssistantName(settings.AssistantName);
         tokens.Value=Math.Clamp(settings.MaxTokens,32,8192);fps.Value=Math.Clamp((decimal)settings.Fps,0.1m,2);system.Text=settings.SystemPrompt;
         Fill(wikiFlavour,new[]{"mini","nopic"},settings.WikiFlavour,"wiki");
         wikiOnlineEnabled.Checked=settings.WikiOnlineEnabled;wikiPath.Text=settings.WikiPath;wikiEnabled.Checked=settings.WikiEnabled;wikiAuto.Checked=settings.WikiAuto;webEnabled.Checked=settings.WebEnabled;weatherEnabled.Checked=settings.WeatherEnabled;mcpEnabled.Checked=settings.McpEnabled;
+        showSources.Checked=settings.ShowSources;showTools.Checked=settings.ShowToolCalls;
         hideDestinations.Checked=settings.HideChatDestinations;offlineMode.Checked=settings.OfflineMode;save.Checked=settings.SaveAudio;tools.Checked=settings.Tools;videoAudio.Checked=settings.VideoAudio;autoplay.Checked=settings.PlayAudio;
     }
     void BuildChat()
     {
         var shell=new SplitContainer{Width=1050,Dock=DockStyle.Fill,FixedPanel=FixedPanel.Panel1,SplitterDistance=210,Panel1MinSize=170,Panel2MinSize=400,SplitterWidth=8};chatPage.Controls.Add(shell);
-        var sidebar=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=2,Padding=new Padding(0,0,8,0)};sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute,50));sidebar.RowStyles.Add(new RowStyle(SizeType.Percent,100));shell.Panel1.Controls.Add(sidebar);
-        SetLabel(newChat,"new_chat");newChat.Dock=DockStyle.Top;newChat.Height=38;sidebar.Controls.Add(newChat,0,0);sidebar.Controls.Add(chatList,0,1);
+        var sidebar=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=4,Padding=new Padding(0,0,8,0)};sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute,50));sidebar.RowStyles.Add(new RowStyle(SizeType.Percent,100));sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute,48));sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute,44));shell.Panel1.Controls.Add(sidebar);
+        SetLabel(newChat,"new_chat");newChat.Dock=DockStyle.Top;newChat.Height=38;sidebar.Controls.Add(newChat,0,0);sidebar.Controls.Add(chatList,0,1);SetLabel(pdfExport,"export_pdf");pdfExport.Dock=DockStyle.Fill;pdfExport.Margin=new Padding(0,8,0,0);sidebar.Controls.Add(pdfExport,0,2);
+        SetLabel(outputFolder,"open_output_folder");outputFolder.Dock=DockStyle.Fill;outputFolder.Margin=new Padding(0,4,0,0);sidebar.Controls.Add(outputFolder,0,3);
         newChat.Click+=(_,_)=>{if(!busy&&!recording)CreateChat();};
         chatList.SelectedIndexChanged+=(_,_)=>{if(!selectingChat&&!busy&&!recording&&chatList.SelectedItem is ChatSession chat&&chat.Id!=activeChat.Id){SaveCurrentChat();RestoreChat(chat);}};
         chatList.DrawItem+=(_,e)=>{if(e.Index<0)return;var item=(ChatSession)chatList.Items[e.Index];bool selected=(e.State&DrawItemState.Selected)!=0;var back=C(selected?"accent":"surface");using var brush=new SolidBrush(back);e.Graphics.FillRectangle(brush,e.Bounds);var rectangle=new Rectangle(e.Bounds.X+8,e.Bounds.Y+5,e.Bounds.Width-16,Font.Height+4);TextRenderer.DrawText(e.Graphics,item.Title,Font,rectangle,selected?Contrast(back):C("foreground"),TextFormatFlags.SingleLine|TextFormatFlags.EndEllipsis|TextFormatFlags.NoPrefix);rectangle.Y+=Font.Height+6;rectangle.Height=Font.Height+2;TextRenderer.DrawText(e.Graphics,item.Updated.LocalDateTime.ToString("g"),Font,rectangle,selected?Contrast(back):C("muted"),TextFormatFlags.SingleLine|TextFormatFlags.EndEllipsis);};
@@ -138,12 +148,12 @@ public sealed class MainForm : Form
     {
         var scroll=new Panel{Dock=DockStyle.Fill,AutoScroll=true};settingsPage.Controls.Add(scroll);
         var grid=new TableLayoutPanel{Dock=DockStyle.Top,AutoSize=true,ColumnCount=2,Padding=new Padding(0,0,6,0)};grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,50));grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,50));scroll.Controls.Add(grid);
-        var language=SettingsGroup("language_voice",new[]{("input_language",(Control)inputLanguage),("output_language",outputLanguage),("speech_language",speechLanguage),("voice",voice)});grid.Controls.Add(language,0,0);
+        var language=SettingsGroup("language_voice",new[]{("assistant_name",(Control)assistantName),("input_language",inputLanguage),("output_language",outputLanguage),("speech_language",speechLanguage),("voice",voice)});grid.Controls.Add(language,0,0);
         var model=SettingsGroup("model_output",new[]{("task",(Control)task),("output",format),("device",device),("tokens",tokens),("fps",fps),("image_backend",imageBackend),("image_gpu",imageGpu),("image_gpu_runtime",imageGpuInstall)});grid.Controls.Add(model,1,0);
         SetLabel(imageGpuInstall,"image_gpu_install");
         grid.Controls.Add(SettingsGroup("appearance",new[]{("interface",(Control)ui),("theme",theme)}),0,1);
         var behavior=Group("behavior");behavior.AutoSize=true;var checks=new TableLayoutPanel{Dock=DockStyle.Top,AutoSize=true,ColumnCount=1,Padding=new Padding(4)};
-        foreach(var (check,key) in new[]{(hideDestinations,"hide_chat_destinations"),(save,"save_audio"),(autoplay,"autoplay"),(tools,"tools"),(videoAudio,"video_audio")}){SetLabel(check,key);check.AutoSize=true;check.UseMnemonic=false;check.Margin=new Padding(0,5,0,5);checks.Controls.Add(check);}
+        foreach(var (check,key) in new[]{(showSources,"show_sources"),(showTools,"show_tools"),(hideDestinations,"hide_chat_destinations"),(save,"save_audio"),(autoplay,"autoplay"),(tools,"tools"),(videoAudio,"video_audio")}){SetLabel(check,key);check.AutoSize=true;check.UseMnemonic=false;check.Margin=new Padding(0,5,0,5);checks.Controls.Add(check);}
         behavior.Controls.Add(checks);grid.Controls.Add(behavior,1,1);
         var knowledge=Group("knowledge");knowledge.AutoSize=true;
         var knowledgeGrid=new TableLayoutPanel{Dock=DockStyle.Top,AutoSize=true,ColumnCount=1};
@@ -173,7 +183,7 @@ public sealed class MainForm : Form
         var file=Parent("menu_file");Action(file,"new_chat",async()=>await ClearChat(),true,Keys.Control|Keys.N);Action(file,"export",()=>Export());Action(file,"folder",()=>OpenOutput());file.DropDownItems.Add(new ToolStripSeparator());Action(file,"quit",()=>Close());
         var model=Parent("menu_model");Action(model,"setup",async()=>await Setup(),true);Action(model,"download",async()=>await Download(),true);Action(model,"play",()=>PlayLast());
         var view=Parent("menu_view");Action(view,"tab_chat",()=>tabs.SelectedTab=chatPage);Action(view,"tab_settings",()=>tabs.SelectedTab=settingsPage);Action(view,"tab_setup",()=>tabs.SelectedTab=setupPage);
-        var help=Parent("menu_help");Action(help,"readme",()=>OpenFile(Path.Combine(Paths.Root,"README.md")));Action(help,"about",()=>MessageBox.Show(this,"LFM3 Desk 1.4.0\nC# / local LFM3 Omni + Tiny-SD\ngithub.com/zeittresor",T("about"),MessageBoxButtons.OK,MessageBoxIcon.Information));
+        var help=Parent("menu_help");Action(help,"readme",()=>OpenFile(Path.Combine(Paths.Root,"README.md")));Action(help,"about",()=>MessageBox.Show(this,"LFM3 Desk 1.5.1\nC# / local LFM3 Omni + Tiny-SD\ngithub.com/zeittresor",T("about"),MessageBoxButtons.OK,MessageBoxIcon.Information));
     }
     GroupBox Group(string key){var group=new GroupBox{Dock=DockStyle.Fill,Padding=new Padding(10,24,10,10),Margin=new Padding(0,0,10,10)};SetLabel(group,key);return group;}
     GroupBox SettingsGroup(string key,(string Key,Control Control)[] fields)
@@ -219,7 +229,7 @@ public sealed class MainForm : Form
         {
             var lines=toolbarButtons.Concat(new[]{details,newChat,wikiBrowse,wikiDownload,mcpExport}).Select(button=>$"{button.Text}: Bounds={button.Bounds}; Client={button.ClientSize}; ParentClient={button.Parent?.ClientSize}; FontHeight={button.Font.Height}; DPI={button.DeviceDpi}; Enabled={button.Enabled}");
             var directory=Path.Combine(Paths.Root,"output","logs");Directory.CreateDirectory(directory);
-            File.WriteAllLines(Path.Combine(directory,"ui-layout.log"),new[]{$"LFM3 Desk 1.4.0 | ui-layout | {DateTimeOffset.Now:O}"}.Concat(lines));
+            File.WriteAllLines(Path.Combine(directory,"ui-layout.log"),new[]{$"LFM3 Desk 1.5.1 | ui-layout | {DateTimeOffset.Now:O}"}.Concat(lines));
         }
         catch{}
     }
@@ -244,7 +254,7 @@ public sealed class MainForm : Form
     }
     Color C(string key)
     {
-        string fallback=key switch{"background"=>"#151922","surface"=>"#232a36","accent"=>"#31517b","muted"=>"#b2bdcc","border"=>"#536073","error"=>"#6b252b",_=>"#f0f3fa"};
+        string fallback=key switch{"background"=>"#151922","surface"=>"#232a36","accent"=>"#31517b","muted"=>"#b2bdcc","border"=>"#536073","error"=>"#6b252b","tool"=>"#ffd166",_=>"#f0f3fa"};
         return ColorTranslator.FromHtml(palette.GetValueOrDefault(key,fallback));
     }
     static Color Contrast(Color color)=>color.GetBrightness()>.62f?Color.FromArgb(20,25,32):Color.White;
@@ -257,11 +267,11 @@ public sealed class MainForm : Form
                 if(control is DeskButton button)button.ConfigureTheme(C("accent"),Contrast(C("accent")),C("border"));
                 foreach(Control child in control.Controls)Paint(child);control.Invalidate();}
             Paint(this);menu.Renderer=new DeskMenuRenderer(C("background"),C("surface"),C("accent"),C("foreground"),C("muted"));
-            errorBanner.BackColor=C("error");errorText.BackColor=C("error");errorText.ForeColor=Contrast(C("error"));
+            errorBanner.BackColor=C("error");errorText.BackColor=C("error");errorText.ForeColor=Contrast(C("error"));RenderTranscript();
         }catch(Exception e){status.Text=e.Message;}
     }
-    Settings ReadSettings(){settings.ImageBackend=Value(imageBackend);settings.ImageGpu=(int)imageGpu.Value;settings.HideChatDestinations=hideDestinations.Checked;settings.OfflineMode=offlineMode.Checked;settings.WikiOnlineEnabled=wikiOnlineEnabled.Checked;settings.WikiEnabled=wikiEnabled.Checked;settings.WikiAuto=wikiAuto.Checked;settings.WikiPath=wikiPath.Text.Trim();settings.WikiFlavour=Value(wikiFlavour);settings.WebEnabled=webEnabled.Checked;settings.WeatherEnabled=weatherEnabled.Checked;settings.McpEnabled=mcpEnabled.Checked;settings.UiLanguage=Value(ui);settings.Theme=Value(theme);settings.InputLanguage=Value(inputLanguage);settings.OutputLanguage=Value(outputLanguage);settings.SpeechLanguage=Value(speechLanguage);settings.Output=Value(format);settings.Voice=Value(voice);settings.Device=Value(device);settings.SaveAudio=save.Checked;settings.Tools=tools.Checked;settings.VideoAudio=videoAudio.Checked;settings.PlayAudio=autoplay.Checked;settings.MaxTokens=(int)tokens.Value;settings.Fps=(double)fps.Value;settings.SystemPrompt=system.Text;return settings;}
-    void UpdateAvailability(){chatList.Enabled=newChat.Enabled=!busy&&!recording;wikiDownload.Enabled=!busy&&!recording;wikiBrowse.Enabled=!busy;wikiFlavour.Enabled=!busy;send.Enabled=!busy&&!recording&&Paths.RuntimeReady;mic.Enabled=!busy;attach.Enabled=remove.Enabled=!busy;setup.Enabled=download.Enabled=!busy&&!recording;imageGpuInstall.Enabled=!busy&&!recording&&Paths.RuntimeReady;imageBackend.Enabled=imageGpu.Enabled=!busy;device.Enabled=!busy;stop.Enabled=setupCancel.Enabled=busy;foreach(var item in idleMenuItems)item.Enabled=!busy&&!recording;}
+    Settings ReadSettings(){settings.ShowSources=showSources.Checked;settings.ShowToolCalls=showTools.Checked;settings.AssistantName=Settings.CleanAssistantName(assistantName.Text);settings.ImageBackend=Value(imageBackend);settings.ImageGpu=(int)imageGpu.Value;settings.HideChatDestinations=hideDestinations.Checked;settings.OfflineMode=offlineMode.Checked;settings.WikiOnlineEnabled=wikiOnlineEnabled.Checked;settings.WikiEnabled=wikiEnabled.Checked;settings.WikiAuto=wikiAuto.Checked;settings.WikiPath=wikiPath.Text.Trim();settings.WikiFlavour=Value(wikiFlavour);settings.WebEnabled=webEnabled.Checked;settings.WeatherEnabled=weatherEnabled.Checked;settings.McpEnabled=mcpEnabled.Checked;settings.UiLanguage=Value(ui);settings.Theme=Value(theme);settings.InputLanguage=Value(inputLanguage);settings.OutputLanguage=Value(outputLanguage);settings.SpeechLanguage=Value(speechLanguage);settings.Output=Value(format);settings.Voice=Value(voice);settings.Device=Value(device);settings.SaveAudio=save.Checked;settings.Tools=tools.Checked;settings.VideoAudio=videoAudio.Checked;settings.PlayAudio=autoplay.Checked;settings.MaxTokens=(int)tokens.Value;settings.Fps=(double)fps.Value;settings.SystemPrompt=system.Text;return settings;}
+    void UpdateAvailability(){pdfExport.Enabled=!busy&&!recording&&Paths.RuntimeReady;chatList.Enabled=newChat.Enabled=!busy&&!recording;wikiDownload.Enabled=!busy&&!recording;wikiBrowse.Enabled=!busy;wikiFlavour.Enabled=!busy;send.Enabled=!busy&&!recording&&Paths.RuntimeReady;mic.Enabled=!busy;attach.Enabled=remove.Enabled=!busy;setup.Enabled=download.Enabled=!busy&&!recording;imageGpuInstall.Enabled=!busy&&!recording&&Paths.RuntimeReady;imageBackend.Enabled=imageGpu.Enabled=!busy;device.Enabled=!busy;stop.Enabled=setupCancel.Enabled=busy;foreach(var item in idleMenuItems)item.Enabled=!busy&&!recording;}
     void UpdateSummary()
     {
         var available=Paths.HasWikipedia(wikiPath.Text.Trim());
@@ -335,7 +345,8 @@ public sealed class MainForm : Form
                 }
                 if(e.GetProperty("result").TryGetProperty("error",out var toolError))AppendTranscript(T("tool_failed")+" "+toolError.GetString()+"\n");
                 break;
-            case "image":if(imageProgressPanel.Visible)FinishImageProgress("image_completed",true);lastImage=e.GetProperty("path").GetString();if(lastImage!=null&&File.Exists(lastImage)){using var source=Image.FromFile(lastImage);var copy=new Bitmap(source);preview.Image?.Dispose();preview.Image=copy;results.Panel2Collapsed=false;results.SplitterDistance=Math.Max(100,results.Width*2/3);}break;
+            case "code_saved":Log("Code: "+e.GetProperty("path").GetString());break;
+            case "image":if(imageProgressPanel.Visible)FinishImageProgress("image_completed",true);lastImage=e.GetProperty("path").GetString();if(lastImage!=null&&!activeChat.GeneratedImages.Contains(lastImage))activeChat.GeneratedImages.Add(lastImage);if(lastImage!=null&&File.Exists(lastImage)){using var source=Image.FromFile(lastImage);var copy=new Bitmap(source);preview.Image?.Dispose();preview.Image=copy;results.Panel2Collapsed=false;results.SplitterDistance=Math.Max(100,results.Width*2/3);}break;
         }
     }
     async Task Send()
@@ -346,11 +357,11 @@ public sealed class MainForm : Form
         if(string.IsNullOrWhiteSpace(activeChat.Transcript)){activeChat.Title=string.IsNullOrWhiteSpace(request.input)?T("media_chat"):request.input.Replace("\r"," ").Replace("\n"," ").Trim();if(activeChat.Title.Length>48)activeChat.Title=activeChat.Title[..48]+"…";}
         AppendTranscript("\n"+T("you")+": "+request.input+"\n");
         SaveCurrentChat();RefreshChats();
-        await Execute(async ct=>{var reply=await worker.SendAsync(request,ct);if(reply==null)return;if(reply.History!=null)activeChat.History=reply.History;AppendTranscript("\nLFM3: "+reply.Text+reply.SourceText+"\n");answer.SelectionStart=answer.TextLength;answer.ScrollToCaret();player?.Stop();player?.Dispose();DeleteTemporary();lastAudio=reply.Audio;lastTemporary=reply.Temporary;if(lastAudio!=null&&autoplay.Checked){player=new SoundPlayer(lastAudio);player.Play();}prompt.Clear();media.Clear();attachments.Items.Clear();SaveCurrentChat();RefreshChats();},T("generating"));
+        await Execute(async ct=>{var reply=await worker.SendAsync(request,ct);if(reply==null)return;if(reply.History!=null)activeChat.History=reply.History;AppendTranscript("\nLFM3: "+reply.Text+ChatDisplay.WrapSources(reply.SourceText)+"\n");answer.SelectionStart=answer.TextLength;answer.ScrollToCaret();player?.Stop();player?.Dispose();DeleteTemporary();lastAudio=reply.Audio;lastTemporary=reply.Temporary;if(lastAudio!=null&&autoplay.Checked){player=new SoundPlayer(lastAudio);player.Play();}prompt.Clear();media.Clear();attachments.Items.Clear();SaveCurrentChat();RefreshChats();},T("generating"));
     }
     async Task<bool> Setup()
     {
-        if(busy||recording)return false;worker.Stop();tabs.SelectedTab=setupPage;Log("\n=== LFM3 Desk 1.4.0 / Setup ===");
+        if(busy||recording)return false;worker.Stop();tabs.SelectedTab=setupPage;Log("\n=== LFM3 Desk 1.5.1 / Setup ===");
         var reporter=new Progress<string>(SetupLine);var ok=await Execute(ct=>SetupRunner.RunAsync(Value(device),reporter,ct,ReadSettings()),T("setup_running"));
         if(ok&&tabs.SelectedTab==setupPage)tabs.SelectedTab=chatPage;return ok;
     }
@@ -374,7 +385,19 @@ public sealed class MainForm : Form
     Task ClearChat(){if(!busy&&!recording)CreateChat();return Task.CompletedTask;}
     void InitializeChats(){chatSessions.AddRange(chatStore.Load());if(chatSessions.Count==0){activeChat=new ChatSession{Title=T("new_chat")};chatSessions.Add(activeChat);chatStore.Save(activeChat);}RestoreChat(chatSessions[0]);RefreshChats();}
     void AppendTranscript(string text){activeChat.Transcript+=text;RenderTranscript();}
-    void RenderTranscript(){answer.Text=hideDestinations.Checked?ChatDisplay.HideDestinations(activeChat.Transcript):activeChat.Transcript;answer.SelectionStart=answer.TextLength;answer.ScrollToCaret();}
+    void RenderTranscript()
+    {
+        var raw=ChatDisplay.FilterMetadata(activeChat.Transcript,showSources.Checked,showTools.Checked);
+        var source=hideDestinations.Checked?ChatDisplay.HideDestinations(raw):raw;
+        var formatted=ChatDisplay.FormatTranscript(source,assistantName.Text);answer.SuspendLayout();
+        try{
+            answer.Text=formatted.Text;answer.SelectAll();using var regular=new Font(answer.Font,FontStyle.Regular);answer.SelectionFont=regular;answer.SelectionColor=C("foreground");
+            using var bold=new Font(answer.Font,FontStyle.Bold);
+            foreach(var span in formatted.Bold){answer.Select(span.Start,span.Length);answer.SelectionFont=bold;}
+            foreach(var span in formatted.Tools){answer.Select(span.Start,span.Length);answer.SelectionColor=C("tool");}
+            answer.Select(answer.TextLength,0);answer.SelectionFont=regular;answer.SelectionColor=C("foreground");answer.ScrollToCaret();
+        }finally{answer.ResumeLayout();}
+    }
     void SaveCurrentChat(){activeChat.Draft=prompt.Text;activeChat.Attachments=media.ToList();activeChat.Image=lastImage;activeChat.Audio=lastTemporary?null:lastAudio;activeChat.Updated=DateTimeOffset.Now;chatStore.Save(activeChat);}
     void RefreshChats(){selectingChat=true;try{chatList.BeginUpdate();chatList.Items.Clear();foreach(var chat in chatSessions.OrderByDescending(c=>c.Updated))chatList.Items.Add(chat);chatList.SelectedItem=activeChat;chatList.EndUpdate();}finally{selectingChat=false;}}
     void CreateChat(){SaveCurrentChat();var chat=new ChatSession{Title=T("new_chat")};chatSessions.Add(chat);RestoreChat(chat);chatStore.Save(chat);RefreshChats();tabs.SelectedTab=chatPage;prompt.Focus();}
@@ -388,6 +411,24 @@ public sealed class MainForm : Form
     void AttachFiles(){using var dialog=new OpenFileDialog{Multiselect=true,Filter="Media|*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.wav;*.mp3;*.flac;*.ogg;*.m4a;*.mp4;*.mkv;*.webm;*.mov|All|*.*"};if(dialog.ShowDialog()!=DialogResult.OK)return;foreach(var file in dialog.FileNames){string ext=Path.GetExtension(file).ToLowerInvariant();string kind=new[]{".png",".jpg",".jpeg",".webp",".bmp"}.Contains(ext)?"image":new[]{".mp4",".mkv",".webm",".mov"}.Contains(ext)?"video":"audio";media.Add(new Attachment(kind,file));attachments.Items.Add(kind+": "+Path.GetFileName(file));}}
     void Record(){try{if(!recording){recorder.Start();recording=true;mic.Text=T("stop_recording");status.Text=T("recording");}else{string file=recorder.Stop();recording=false;media.Add(new Attachment("audio",file));attachments.Items.Add("audio: "+Path.GetFileName(file));mic.Text=T("record");status.Text=T("ready");}UpdateAvailability();}catch(Exception e){recording=false;recorder.Dispose();mic.Text=T("record");UpdateAvailability();ReportError(e);}}
     void PlayLast(){try{if(lastAudio!=null&&File.Exists(lastAudio)){player?.Dispose();player=new SoundPlayer(lastAudio);player.Play();}}catch(Exception e){ReportError(e);}}
+    async Task ExportPdf(){try{await ExportPdfCore();}catch(Exception error){ReportError(error);}}
+    async Task ExportPdfCore()
+    {
+        if(busy||recording)return;SaveCurrentChat();
+        using var dialog=new SaveFileDialog{Filter="PDF|*.pdf",FileName="chat_"+DateTime.Now.ToString("yyyyMMdd_HHmmss")+".pdf"};
+        if(dialog.ShowDialog()!=DialogResult.OK)return;
+        var folder=Path.Combine(Paths.Root,"output","temp");Directory.CreateDirectory(folder);var input=Path.Combine(folder,Guid.NewGuid().ToString("N")+".json");
+        var images=activeChat.GeneratedImages.Concat(new[]{activeChat.Image??""}).Where(p=>!string.IsNullOrWhiteSpace(p)).Distinct().ToList();
+        File.WriteAllText(input,JsonSerializer.Serialize(new{title=activeChat.Title,text=answer.Text,assistant_name=Settings.CleanAssistantName(assistantName.Text),images}));
+        try{await Execute(async ct=>{
+            var info=new ProcessStartInfo(Paths.Python){WorkingDirectory=Paths.Root,UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true};
+            foreach(var arg in new[]{"-u",Path.Combine(Paths.Root,"backend","pdf_export.py"),"--input",input,"--output",dialog.FileName})info.ArgumentList.Add(arg);
+            info.Environment["PYTHONIOENCODING"]="utf-8";using var process=Process.Start(info)??throw new IOException("PDF process failed");
+            using var cancel=ct.Register(()=>{try{process.Kill(true);}catch{}});
+            var stdout=process.StandardOutput.ReadToEndAsync();var stderr=process.StandardError.ReadToEndAsync();await process.WaitForExitAsync(ct);
+            var output=await stdout;var error=await stderr;Log(output);if(process.ExitCode!=0)throw new IOException("PDF: "+error);
+        },T("export_pdf"));}finally{if(File.Exists(input))File.Delete(input);}
+    }
     void Export(){try{using var dialog=new SaveFileDialog{Filter="Text|*.txt",FileName="chat.txt"};if(dialog.ShowDialog()==DialogResult.OK)File.WriteAllText(dialog.FileName,answer.Text);}catch(Exception e){ReportError(e);}}
     void OpenOutput(){Directory.CreateDirectory(Path.Combine(Paths.Root,"output"));OpenFile(Path.Combine(Paths.Root,"output"));}
     void OpenSetupLog(){var file=Path.Combine(Paths.Root,"output","logs","setup.log");if(File.Exists(file))OpenFile(file);else tabs.SelectedTab=setupPage;}

@@ -1,3 +1,36 @@
+# 1.5.1 — 2026-11-08
+
+- Add a localized, themed Open output folder button directly beneath PDF export in the chat sidebar, with a dedicated 44px row; reuse the existing Explorer-opening action. Available while generating and without runtime setup. Create output folder if missing, report filesystem errors.
+- Windows-x64 Release rebuilt; 81 existing C# assertions passed. No additional tests for this reversible UI wiring change; native Windows UI/Explorer not exercised.
+- No dependency/model changes.
+
+# 1.5.0 — 2026-11-08
+
+- Conservative DE/EN image-intent guard and one app-owned image-tool fallback when the model returns only prose. Reuse actual weather/tool evidence; respect tools-off and do not retry an existing image failure.
+- Independent reversible source/tool-row display switches; sources default hidden, tool rows default visible. Preserve raw metadata and error/offline notices; protect code literals from label/path/source filtering. CLI source opt-in/out.
+- PDF export button beneath chat list. Offline ReportLab export with embedded system fonts, paginated text/code, per-chat generated-image list and image appendix. ReportLab added to main venv requirements; model/GPU requirements unchanged.
+- Archive fenced generated code into output/code with safe timestamped unique names, language extensions, versioned manifest and incomplete flags. No execution. Remove fenced code before generated speech/translation and at explicit TTS render boundary.
+- New offline convert_units tool for temperature, speed, length and mass; exposed through optional MCP server.
+- 155 backend tests, 81 C# assertions passed; Release Windows-x64 rebuilt. PDF extraction/pagination and rendered 2-/3-page examples visually checked. Windows CPython 3.12 x64 PDF package resolution/download succeeded.
+- Actual target Windows UI, hardware image inference and model compliance not exercised here. No PowerShell behavior changes beyond version headers.
+
+# 1.4.2 — 2026-11-08
+
+- Configurable AssistantName in settings, immediate reversible display of canonical LFM3 speaker labels including old chats; default LFM3, single-line trimmed 64-character bound. CLI -name and MCP forwarding.
+- Name passed as quoted chat identity in the model system prompt; ASR/translation/explicit TTS prompts unchanged. Application branding and stored role/history structure unchanged.
+- Native tool-row highlighting without brackets, theme-specific tool colors and immediate recoloring on theme changes. Preserve bold offsets and archived raw transcripts; exports follow display.
+- 134 backend tests and 66 C# assertions passed. All 8 theme tool colors checked against surface contrast (6.46–13.18). Windows-x64 rebuilt; actual Windows UI/model identity behavior not evaluated here.
+- No dependency/model/installer behavior changes.
+
+# 1.4.1 — 2026-11-08
+
+- Speech-only validated German/English ISO dates, German numeric/named-month dates, contextual German ordinal forms, clocks and selected German abbreviations/durations; natural minimum/maximum temperature labels. Preserve units, raw chat/history and unsupported/invalid notations.
+- Chat renders paired **bold** markers as native RichTextBox font spans; normalized Windows newline offsets; display/path-hiding composition and plain export remain supported.
+- Concise weather/image answer instructions; conservative exact paragraph deduplication, preserving distinct values/days and offline/error context.
+- Default image tool result passed to model omits backend/seed/prompt details; full diagnostics retained in protocol/PNG sidecar and available for explicit technical questions. Narrow generated-speech cleanup for unrequested technical image narration.
+- 132 backend tests and 53 C# assertions passed; Windows-x64 rebuilt. Screenshot inspected; audio clip cannot be directly listened to in this runtime. Actual model/listening/native Windows UI validation outstanding.
+- No dependency/model/installer logic changes. Optional DirectML backend retained.
+
 # 1.4.0 — 2026-11-06
 
 - Optional DirectML image backend, separate GUI backend/adapter controls and opt-in install action. CPU default; LFM3 device selection independent.

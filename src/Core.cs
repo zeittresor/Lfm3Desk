@@ -12,6 +12,13 @@ public sealed class Settings
     public string OutputLanguage { get; set; } = "DE";
     public string SpeechLanguage { get; set; } = "DE";
     public string Output { get; set; } = "txt,tts";
+    public string AssistantName {get;set;} = "LFM3";
+    public static string CleanAssistantName(string? value)
+    {
+        var name=System.Text.RegularExpressions.Regex.Replace(value??"",@"[\p{Cc}\s]+"," ").Trim().TrimEnd(':').Trim();
+        if(name.Length>64)name=name[..64];
+        return string.IsNullOrWhiteSpace(name)?"LFM3":name;
+    }
     public string Voice { get; set; } = "female";
     public bool WikiEnabled { get; set; } = true;
     public bool WikiAuto { get; set; } = true;
@@ -21,6 +28,8 @@ public sealed class Settings
     public bool WebEnabled { get; set; } = false;
     public bool WeatherEnabled { get; set; } = true;
     public bool OfflineMode {get;set;} = false;
+    public bool ShowSources {get;set;} = false;
+    public bool ShowToolCalls {get;set;} = true;
     public bool HideChatDestinations {get;set;} = true;
     public bool McpEnabled { get; set; } = false;
     public bool SaveAudio { get; set; } = true;
@@ -73,6 +82,7 @@ public sealed class Request
     public string input_language { get; set; } = "DE";
     public string output_language { get; set; } = "DE";
     public string speech_language { get; set; } = "DE";
+    public string assistant_name {get;set;} = "LFM3";
     public string voice { get; set; } = "female";
     public string device { get; set; } = "auto";
     public string image_backend {get;set;} = "cpu";
@@ -84,6 +94,7 @@ public sealed class Request
     public bool web_enabled { get; set; } = false;
     public bool weather_enabled { get; set; } = true;
     public bool offline {get;set;} = false;
+    public bool show_sources {get;set;} = false;
     public bool save_audio { get; set; } = true;
     public bool tools { get; set; } = true;
     public bool video_audio { get; set; } = true;
@@ -93,7 +104,7 @@ public sealed class Request
     [JsonIgnore(Condition=JsonIgnoreCondition.WhenWritingNull)]
     public List<JsonElement>? history {get;set;}
     public List<Attachment> attachments { get; set; } = new();
-    public static Request From(Settings s) => new() { image_backend=s.ImageBackend,image_gpu=s.ImageGpu,offline=s.OfflineMode,wiki_online_enabled=s.WikiOnlineEnabled,wiki_enabled=s.WikiEnabled,wiki_auto=s.WikiAuto,wiki_path=s.WikiPath,web_enabled=s.WebEnabled,weather_enabled=s.WeatherEnabled,output=s.Output,input_language=s.InputLanguage,output_language=s.OutputLanguage,speech_language=s.SpeechLanguage,voice=s.Voice,device=s.Device,save_audio=s.SaveAudio,tools=s.Tools,video_audio=s.VideoAudio,max_tokens=s.MaxTokens,fps=s.Fps,system=s.SystemPrompt };
+    public static Request From(Settings s) => new() { show_sources=s.ShowSources,assistant_name=Settings.CleanAssistantName(s.AssistantName),image_backend=s.ImageBackend,image_gpu=s.ImageGpu,offline=s.OfflineMode,wiki_online_enabled=s.WikiOnlineEnabled,wiki_enabled=s.WikiEnabled,wiki_auto=s.WikiAuto,wiki_path=s.WikiPath,web_enabled=s.WebEnabled,weather_enabled=s.WeatherEnabled,output=s.Output,input_language=s.InputLanguage,output_language=s.OutputLanguage,speech_language=s.SpeechLanguage,voice=s.Voice,device=s.Device,save_audio=s.SaveAudio,tools=s.Tools,video_audio=s.VideoAudio,max_tokens=s.MaxTokens,fps=s.Fps,system=s.SystemPrompt };
 }
 public sealed record SourceInfo(string title,string url,string? kind=null,string? archive=null);
 public sealed record Reply(string Text, string? Audio, bool Temporary, List<SourceInfo>? Sources=null,List<JsonElement>? History=null)
@@ -199,6 +210,8 @@ public static class Cli
                 case "no-wiki":r.wiki_enabled=false;break;
                 case "no-wiki-auto":r.wiki_auto=false;break;
                 case "wiki-online":r.wiki_online_enabled=true;break;
+                case "sources":r.show_sources=true;break;
+                case "no-sources":r.show_sources=false;break;
                 case "web":r.web_enabled=true;break;
                 case "offline":r.offline=true;break;
                 case "no-weather":r.weather_enabled=false;break;
@@ -213,6 +226,7 @@ public static class Cli
                 case "output": r.output=Value().ToLowerInvariant(); break;
                 case "task": r.task=Value().ToLowerInvariant(); break;
                 case "image": case "audio": case "video": r.attachments.Add(new(key,Path.GetFullPath(Value()))); break;
+                case "name":r.assistant_name=Settings.CleanAssistantName(Value());break;
                 case "voice": r.voice=Value().ToLowerInvariant(); break;
                 case "device": r.device=Value().ToLowerInvariant(); break;
                 case "image-backend":r.image_backend=Value().ToLowerInvariant();break;
@@ -243,13 +257,15 @@ public static class Cli
         return(r,play,file,help);
     }
     public const string Help="""
-LFM3 Desk 1.4.0 — local C# GUI / CLI
+LFM3 Desk 1.5.1 — local C# GUI / CLI
 lfm3gui -nogui -language DE -input "Erkläre die Gezeiten" -output txt,tts
   -output txt|tts|txt,tts     -task chat|asr|translate|tts
   -input-language DE        -output-language EN        -speech-language DE
   -image FILE               -audio FILE                -video FILE (repeatable)
   -image-backend cpu|directml  -image-gpu 0 (DXGI adapter index, 0..31)
   Optional DirectML runtime: Settings > Install image GPU runtime; CPU fallback on failure.
+  -sources | -no-sources    Include/omit source listings (default omit)
+  -name "Your name"         Assistant display name (default LFM3)
   -voice female|male        -device auto|cpu|cuda       -max-tokens 1024
   -no-tools                 -no-video-audio            -fps 1
   -no-play                  -no-save-audio             -out-file FILE.txt

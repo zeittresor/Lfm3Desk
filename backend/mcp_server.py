@@ -20,7 +20,7 @@ def create_server(settings_path=None):
         if not value.get('McpEnabled',False):raise PermissionError('MCP is disabled in LFM3 Desk settings.')
         return value
     def request(s):
-        names={'ImageBackend':'image_backend','ImageGpu':'image_gpu','InputLanguage':'input_language','OutputLanguage':'output_language','SpeechLanguage':'speech_language','Voice':'voice','Device':'device','SaveAudio':'save_audio','Tools':'tools','VideoAudio':'video_audio','MaxTokens':'max_tokens','Fps':'fps','SystemPrompt':'system','WikiOnlineEnabled':'wiki_online_enabled','WikiEnabled':'wiki_enabled','WikiAuto':'wiki_auto','WikiPath':'wiki_path','WebEnabled':'web_enabled','OfflineMode':'offline','WeatherEnabled':'weather_enabled'}
+        names={'ShowSources':'show_sources','AssistantName':'assistant_name','ImageBackend':'image_backend','ImageGpu':'image_gpu','InputLanguage':'input_language','OutputLanguage':'output_language','SpeechLanguage':'speech_language','Voice':'voice','Device':'device','SaveAudio':'save_audio','Tools':'tools','VideoAudio':'video_audio','MaxTokens':'max_tokens','Fps':'fps','SystemPrompt':'system','WikiOnlineEnabled':'wiki_online_enabled','WikiEnabled':'wiki_enabled','WikiAuto':'wiki_auto','WikiPath':'wiki_path','WebEnabled':'web_enabled','OfflineMode':'offline','WeatherEnabled':'weather_enabled'}
         return {names[k]:v for k,v in s.items() if k in names}
     def service():
         nonlocal services,signature
@@ -53,6 +53,10 @@ def create_server(settings_path=None):
     def web_read(url:str)->dict:
         """Read a public HTTPS text result from web_search; requires web permission."""
         return run('web_read',{'url':url})
+    @server.tool()
+    def convert_units(value:float,from_unit:str,to_unit:str)->dict:
+        """Convert supported temperature, speed, length or mass units offline."""
+        return run('convert_units',{'value':value,'from_unit':from_unit,'to_unit':to_unit})
     @server.tool()
     def current_weather(place:str,country_code:str='')->dict:
         """Current weather and three-day forecast; requires separate weather permission."""

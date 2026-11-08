@@ -27,7 +27,7 @@ class VerbalizerTests(unittest.TestCase):
  def test_english(self):
   self.assertEqual(verbalize('**Max** ≈ 4.5 °C, 0 %','English'),'maximum approximately four point five degrees Celsius, zero percent')
  def test_original_identifiers(self):
-  self.assertEqual(verbalize('Max kommt am 2026‑11‑07 um 10:30. Wettercode: 61. Datei x123mm','de'),'Max kommt am 2026‑11‑07 um 10:30. Wettercode: 61. Datei x123mm')
+  self.assertEqual(verbalize('Max kommt am 2026‑11‑07 um 10:30. Wettercode: 61. Datei x123mm','de'),'Max kommt am siebten November zweitausendsechsundzwanzig um zehn Uhr dreißig. Wettercode: 61. Datei x123mm')
  def test_saved_summary(self):
   self.assertEqual(verbalize('ca. 4,5 °C max, 1,9 °C min; 0 %‑Nebelchance','de'),'etwa vier Komma fünf Grad Celsius maximal, eins Komma neun Grad Celsius minimal; null Prozent Nebelwahrscheinlichkeit')
  def test_unknown_language(self):

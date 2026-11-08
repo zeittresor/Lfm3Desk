@@ -35,7 +35,7 @@ static class Tests
             Check(sessions.Single(c=>c.Id==bob.Id).History.Count==0,"history isolation");
             alice.Transcript+=" ergänzt";store.Save(alice);Check(store.Load().Single(c=>c.Id==alice.Id).Transcript.EndsWith("ergänzt"),"atomic chat update");
             bool rejected=false;try{store.Save(new ChatSession{Id="../escape"});}catch(ArgumentException){rejected=true;}Check(rejected,"chat id traversal rejected");
-            AppLog.Append("runtime.log","first",true);AppLog.Append("runtime.log","second",true);var log=File.ReadAllText(Path.Combine(chatRoot,"output","logs","runtime.log"));Check(log.Split("LFM3 Desk 1.4.0").Length==3,"runtime version per session");
+            AppLog.Append("runtime.log","first",true);AppLog.Append("runtime.log","second",true);var log=File.ReadAllText(Path.Combine(chatRoot,"output","logs","runtime.log"));Check(log.Split("LFM3 Desk 1.5.1").Length==3,"runtime version per session");
         }finally{Paths.Root=priorRoot;if(Directory.Exists(chatRoot))Directory.Delete(chatRoot,true);}
         Check(new Settings().HideChatDestinations,"hide destinations default on");
         var raw=@"Bild: ![Norderstedt](E:\Debug Enviroment\output\bild (1).png)";
@@ -54,6 +54,46 @@ static class Tests
         Check(Cli.Parse(new[]{"-input","x","-image-backend","cpu"}).Request.image_backend=="cpu","CLI explicit image CPU");
         bool badImage=false;try{Cli.Parse(new[]{"-input","x","-image-backend","cuda"});}catch(ArgumentException){badImage=true;}Check(badImage,"unsupported image backend rejected");
         bool badGpu=false;try{Cli.Parse(new[]{"-input","x","-image-gpu","-1"});}catch(ArgumentException){badGpu=true;}Check(badGpu,"negative image GPU rejected");
+        var formatted=ChatDisplay.FormatBold("Vorher **Wind**: 9 km/h und **Temperatur**: 8 °C.");
+        Check(formatted.Text=="Vorher Wind: 9 km/h und Temperatur: 8 °C.","bold Markdown removed from visible text");
+        Check(formatted.Bold.Count==2&&formatted.Text.Substring(formatted.Bold[0].Start,formatted.Bold[0].Length)=="Wind","correct first bold span");
+        Check(formatted.Text.Substring(formatted.Bold[1].Start,formatted.Bold[1].Length)=="Temperatur","correct second bold span");
+        Check(ChatDisplay.FormatBold("**offen").Text=="**offen","unmatched Markdown preserved");
+        Check(ChatDisplay.FormatBold("**x**").Bold.Single().Length==1,"single character emphasis");
+        var multiline=ChatDisplay.FormatBold("Zeile\r\n**Wind**");Check(multiline.Text.Substring(multiline.Bold[0].Start,multiline.Bold[0].Length)=="Wind","Windows newline offsets");
+        var hidden=ChatDisplay.FormatBold(ChatDisplay.HideDestinations("**[Bild](E:\\output\\bild.png)**"));Check(hidden.Text=="Bild"&&hidden.Bold.Count==1,"hidden path and bold caption compose");
+        Check(Settings.CleanAssistantName("  Mira ")=="Mira","assistant name trimmed");
+        Check(Settings.CleanAssistantName("\r\n : ")=="LFM3","empty assistant name falls back");
+        Check(Settings.CleanAssistantName("Mira\nNova")=="Mira Nova","assistant name single line");
+        Check(Settings.CleanAssistantName(new string('a',80)).Length==64,"assistant name bounded");
+        Check(Request.From(new Settings{AssistantName="Mira"}).assistant_name=="Mira","assistant name forwarded");
+        Check(Cli.Parse(new[]{"-input","x","-name","Mira"}).Request.assistant_name=="Mira","CLI assistant name");
+        var rawTranscript="Du: LFM3 bleibt als Begriff.\n[Tool: current_weather]\nLFM3: **Wind** aus Norden.";
+        var styled=ChatDisplay.FormatTranscript(rawTranscript,"Mira");
+        Check(styled.Text=="Du: LFM3 bleibt als Begriff.\nTool: current_weather\nMira: Wind aus Norden.","assistant label and tool marker rendering");
+        Check(styled.Tools.Count==1&&styled.Text.Substring(styled.Tools[0].Start,styled.Tools[0].Length)=="Tool: current_weather","tool color range");
+        Check(styled.Text.Substring(styled.Bold[0].Start,styled.Bold[0].Length)=="Wind","bold offsets after name and tool rendering");
+        Check(rawTranscript.Contains("[Tool:")&&rawTranscript.Contains("LFM3: **"),"raw transcript preserved");
+        Check(ChatDisplay.FormatTranscript(rawTranscript,"A much longer name").Text.Contains("A much longer name: Wind"),"renaming old transcript is reversible");
+        Check(ChatDisplay.FormatTranscript("Tool: current_weather\r\nLFM3: Text.","").Tools.Count==1,"new and legacy tool formats supported");
+        Check(ChatDisplay.FormatTranscript("Ein [Tool: current_weather] Beispiel.","Mira").Tools.Count==0,"inline tool mention is not a tool row");
+        Check(!new Settings().ShowSources&&new Settings().ShowToolCalls,"source/tool display defaults");
+        var sources="LFM3: Antwort."+ChatDisplay.WrapSources("Sources / Quellen:\n• Wetter Hamburg — https://example.org");
+        Check(!ChatDisplay.FilterMetadata(sources,false,true).Contains("Wetter Hamburg"),"wrapped sources hidden");
+        Check(ChatDisplay.FilterMetadata(sources,true,true).Contains("Wetter Hamburg"),"wrapped sources restored");
+        Check(!ChatDisplay.FilterMetadata(sources,true,true).Contains("LFM3_SOURCES"),"source markers never displayed");
+        Check(!ChatDisplay.FilterMetadata("[Tool: current_weather]\nLFM3: Antwort.",false,false).Contains("current_weather"),"tool row hidden");
+        Check(ChatDisplay.FilterMetadata("[Tool: current_weather]\nLFM3: Antwort.",false,true).Contains("current_weather"),"tool row restored");
+        Check(ChatDisplay.FilterMetadata("Sources / Quellen:\n• Wetter\nDu: Weiter.\nLFM3: Ja.",false,true).Contains("Du: Weiter."),"legacy sources preserve next turn");
+        Check(!ChatDisplay.FilterMetadata("Sources / Quellen:\n• Wetter",false,true).Contains("Wetter"),"legacy sources hidden");
+        Check(ChatDisplay.FilterMetadata("Fehler: offline!",false,false)=="Fehler: offline!","hiding tools preserves errors");
+        Check(Cli.Parse(new[]{"-input","x","-sources"}).Request.show_sources,"CLI source opt-in");
+        var codeText="```python\nx=2**3; y=2**4\nTool: example\nLFM3: literal\n```";
+        Check(ChatDisplay.FormatBold(codeText).Text==codeText,"bold rendering preserves code operators");
+        Check(ChatDisplay.FilterMetadata(codeText,false,false)==codeText,"metadata filtering preserves code");
+        var codeStyled=ChatDisplay.FormatTranscript(codeText,"Mira");Check(codeStyled.Text==codeText&&codeStyled.Tools.Count==0,"code roles and tool strings remain literal");
+        var imageChat=new ChatSession{GeneratedImages=new(){"one.png","two.png"}};Check(System.Text.Json.JsonSerializer.Deserialize<ChatSession>(System.Text.Json.JsonSerializer.Serialize(imageChat))!.GeneratedImages.Count==2,"per-chat image list roundtrip");
+        var codeUrl="```python\nurl='https://example.org/test'\npath='C:/data/input.json'\n```";Check(ChatDisplay.HideDestinations(codeUrl)==codeUrl,"destination hiding preserves code literals");
         Console.WriteLine($"{count} CLI assertions passed.");return 0;
     }
 }

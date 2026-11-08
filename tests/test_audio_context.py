@@ -37,7 +37,7 @@ class AudioTests(unittest.TestCase):
    self.assertEqual(seen[1][0][-1]['content'],'Nebelwahrscheinlichkeit: null Prozent.')
    for conversation,mode,r in seen:self.assertEqual(len(conversation),2);self.assertEqual(mode,'audio');self.assertLessEqual(r['max_tokens'],512)
    manifests=list(Path(temp).rglob('manifest.json'));self.assertEqual(len(manifests),1)
-   manifest=json.loads(manifests[0].read_text());self.assertIn('**Max:**',manifest['source_text']);self.assertNotIn('°C',manifest['prepared_text']);self.assertEqual(manifest['fragments'][0]['text'],seen[0][0][-1]['content']);self.assertEqual(manifest['app_version'],'1.4.0');self.assertEqual(len(list(manifests[0].parent.glob('*.wav'))),3)
+   manifest=json.loads(manifests[0].read_text());self.assertIn('**Max:**',manifest['source_text']);self.assertNotIn('°C',manifest['prepared_text']);self.assertEqual(manifest['fragments'][0]['text'],seen[0][0][-1]['content']);self.assertEqual(manifest['app_version'],'1.5.1');self.assertEqual(len(list(manifests[0].parent.glob('*.wav'))),3)
  def test_save_disabled_keeps_only_final_temporary_wave(self):
   wave=MagicMock();wave.squeeze.return_value.float.return_value.cpu.return_value.numpy.return_value=np.sin(np.arange(240)*.1).astype(np.float32)*.1
   out=types.SimpleNamespace(audio_codes=MagicMock(),audio_lengths=[2])

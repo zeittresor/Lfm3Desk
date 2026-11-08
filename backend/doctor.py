@@ -6,6 +6,7 @@ if sys.prefix == sys.base_prefix or Path(sys.prefix).resolve() != (root/'.venv')
     raise SystemExit('Run this check using this application\'s .venv/Scripts/python.exe. Global Python packages are not used.')
 handle=None
 if os.name=='nt': handle=os.add_dll_directory(str(root/'tools'/'ffmpeg'/'bin'))
+import reportlab
 import torch
 import torchvision
 import torchcodec

@@ -25,6 +25,7 @@ def schema(name, description, properties, required):
 
 TOOLS = [
     schema('generate_image','Generate an image using the offline Tiny-SD model when the user requests a picture. Translate the visual prompt to English. Output is a saved PNG. Width/height 256,384,512; default 512; steps 1..50, default20; guidance1..15,default7; seed=-1 random.',{'prompt':{'type':'string','description':'Detailed English image prompt'},'negative_prompt':{'type':'string'},'width':{'type':'integer','enum':[256,384,512]},'height':{'type':'integer','enum':[256,384,512]},'steps':{'type':'integer'},'guidance':{'type':'number'},'seed':{'type':'integer'}},['prompt']),
+    schema('convert_units','Convert temperatures C/F/K, speed km/h or m/s, length m/km/cm/mm, or mass kg/g. Offline deterministic conversion. Never invent conversions between different physical quantities.',{'value':{'type':'number'},'from_unit':{'type':'string'},'to_unit':{'type':'string'}},['value','from_unit','to_unit']),
     schema('current_time','Get the current local date and time, including UTC offset.',{},[]),
     schema('calculate','Evaluate arithmetic. Operators + - * / // % **; functions sqrt, sin, cos, log, abs, round. Constants pi, e.',{'expression':{'type':'string'}},['expression']),
     schema('list_notes','List UTF-8 text files in the application workspace.',{},[]),
@@ -53,8 +54,27 @@ def calculate(expression):
         return value
     return run(tree.body)
 
+def convert_units(value,from_unit,to_unit):
+    value=float(value)
+    if not math.isfinite(value):raise ValueError('Finite value required')
+    aliases={'°c':'c','celsius':'c','°f':'f','fahrenheit':'f','kelvin':'k','kph':'km/h'}
+    a=aliases.get(from_unit.lower(),from_unit.lower());b=aliases.get(to_unit.lower(),to_unit.lower())
+    temperatures={'c','f','k'}
+    if a in temperatures and b in temperatures:
+        k=value+273.15 if a=='c' else (value-32)*5/9+273.15 if a=='f' else value
+        if k<0:raise ValueError('Temperature below absolute zero')
+        result=k-273.15 if b=='c' else (k-273.15)*9/5+32 if b=='f' else k
+    else:
+        groups=[{'m':1,'km':1000,'cm':.01,'mm':.001},{'kg':1,'g':.001},{'m/s':1,'km/h':1/3.6}]
+        group=next((g for g in groups if a in g and b in g),None)
+        if group is None:raise ValueError('Unsupported or incompatible units')
+        result=value*group[a]/group[b]
+    if not math.isfinite(result):raise ValueError('Conversion overflow')
+    return {'value':round(result,10),'unit':to_unit,'from_value':value,'from_unit':from_unit}
+
 def dispatch(name, args, workspace):
     workspace=Path(workspace).resolve(); workspace.mkdir(parents=True,exist_ok=True)
+    if name=='convert_units':return convert_units(**args)
     if name=='current_time': return {'time':datetime.datetime.now().astimezone().isoformat()}
     if name=='calculate': return {'result':calculate(**args)}
     if name=='list_notes': return {'files':sorted(p.name for p in workspace.glob('*.txt') if p.is_file() and not p.is_symlink())[:200]}
